@@ -10,7 +10,6 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <title>BLAKE SENTIMENT</title>
 
-<!-- Vercel Analytics -->
 <script>
 window.va = window.va || function () {
   (window.vaq = window.vaq || []).push(arguments);
@@ -139,12 +138,12 @@ header {
   justify-content:space-between;
   align-items:center;
   padding:12px 0;
+  border-bottom:1px solid var(--border);
   font-size:13px;
 }
 
-.detail-row span {
-  color:var(--muted);
-}
+.detail-row:last-child { border-bottom:none; }
+.detail-row span:first-child { color:var(--muted); }
 
 .timestamp,.status {
   margin-top:20px;
@@ -252,7 +251,6 @@ footer {
 
 <div class="meter">
 <svg viewBox="0 0 360 230" role="img" aria-label="Bitcoin Blake market sentiment meter">
-
   <defs>
     <linearGradient id="gauge" x1="0" x2="1">
       <stop offset="0%" stop-color="#b94d42"/>
@@ -275,15 +273,10 @@ footer {
     <circle cx="180" cy="185" r="8" fill="#f0eee5"/>
   </g>
 
-  <text x="180" y="139" text-anchor="middle"
-    class="score" id="score">--</text>
-
-  <text x="180" y="163" text-anchor="middle"
-    class="classification" id="classification">LOADING</text>
-
+  <text x="180" y="139" text-anchor="middle" class="score" id="score">--</text>
+  <text x="180" y="163" text-anchor="middle" class="classification" id="classification">LOADING</text>
   <text x="27" y="211" class="scale">0</text>
   <text x="333" y="211" text-anchor="end" class="scale">100</text>
-
 </svg>
 </div>
 
@@ -299,8 +292,8 @@ footer {
   </div>
 
   <div class="detail-row">
-    <span>Market Sentiment</span>
-    <strong id="classificationDisplay">--</strong>
+    <span>24H Volume</span>
+    <strong id="volume">--</strong>
   </div>
 </div>
 
@@ -313,26 +306,19 @@ footer {
   <div class="donation-address" id="donationAddress">bc1qt59feseuqngdcx35pypsyt435a7m5r8cf49s73</div>
 
   <div class="qr-container">
-    <img
-      src="./donation-qr.png"
+    <img src="./donation-qr.png"
       alt="BTCB2 donation QR code"
-      class="donation-qr"
-    >
+      class="donation-qr">
   </div>
 
-  <button class="action-button" id="copyDonation">
-    COPY BTCB2 DONATION ADDRESS
-  </button>
-
+  <button class="action-button" id="copyDonation">COPY BTCB2 DONATION ADDRESS</button>
   <div class="status" id="copyStatus"></div>
 </div>
 
 <div class="section">
   <div class="section-title">INSTALL BLAKE SENTIMENT</div>
 
-  <button class="action-button install-button" id="installButton">
-    INSTALL APPLICATION
-  </button>
+  <button class="action-button install-button" id="installButton">INSTALL APPLICATION</button>
 
   <div class="instructions" style="margin-top:14px">
     <strong>Android / Chrome</strong><br>
@@ -367,23 +353,15 @@ const CONFIG = {
 };
 
 const $ = id => document.getElementById(id);
-
-const clamp = (n,min,max) =>
-  Math.max(min,Math.min(max,n));
-
-const mean = values =>
-  values.length
-    ? values.reduce((a,b)=>a+b,0)/values.length
-    : 0;
+const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
+const mean = values => values.length
+  ? values.reduce((a,b)=>a+b,0)/values.length
+  : 0;
 
 function stdDev(values) {
   if(values.length<2) return 0;
-
   const avg=mean(values);
-
-  return Math.sqrt(
-    mean(values.map(v=>(v-avg)**2))
-  );
+  return Math.sqrt(mean(values.map(v=>(v-avg)**2)));
 }
 
 function classify(score) {
@@ -412,12 +390,8 @@ function normalizeCandles(payload) {
   const parsed=rows.map(row=>{
     const c=Array.isArray(row)
       ? {
-          time:row[0],
-          open:row[1],
-          high:row[2],
-          low:row[3],
-          close:row[4],
-          volume:row[5]
+          time:row[0],open:row[1],high:row[2],
+          low:row[3],close:row[4],volume:row[5]
         }
       : {
           time:row.time ?? row.timestamp ?? row.openTime ?? row.t,
@@ -429,10 +403,7 @@ function normalizeCandles(payload) {
         };
 
     let time=Number(c.time);
-
-    if(time>0 && time<100000000000) {
-      time*=1000;
-    }
+    if(time>0 && time<100000000000) time*=1000;
 
     return {
       time,
@@ -451,7 +422,6 @@ function normalizeCandles(payload) {
   );
 
   parsed.sort((a,b)=>a.time-b.time);
-
   const unique=new Map();
   parsed.forEach(c=>unique.set(c.time,c));
 
@@ -460,7 +430,6 @@ function normalizeCandles(payload) {
 
 function percentileRank(value,samples) {
   if(!samples.length) return 0.5;
-
   return samples.filter(v=>v<=value).length/samples.length;
 }
 
@@ -468,9 +437,7 @@ function returnsVolatility(candles) {
   const returns=[];
 
   for(let i=1;i<candles.length;i++) {
-    returns.push(
-      Math.log(candles[i].close/candles[i-1].close)
-    );
+    returns.push(Math.log(candles[i].close/candles[i-1].close));
   }
 
   return stdDev(returns);
@@ -480,7 +447,6 @@ function calculateSentiment(candles) {
   const latest=candles[candles.length-1];
   const now=latest.time;
   const day=86400000;
-
   const start24=now-day;
   const start7=now-7*day;
   const start30=now-30*day;
@@ -490,94 +456,57 @@ function calculateSentiment(candles) {
   const last30=candles.filter(c=>c.time>=start30);
   const before24=candles.filter(c=>c.time<=start24);
 
-  if(
-    last24.length<2 ||
-    last7.length<2 ||
-    last30.length<2 ||
-    !before24.length
-  ) {
+  if(last24.length<2 || last7.length<2 ||
+     last30.length<2 || !before24.length) {
     throw new Error("Not enough historical candles. At least 30 days of data are needed.");
   }
 
-  const momentum=
-    (latest.close/before24[before24.length-1].close-1)*100;
-
-  const momentumScore=clamp(
-    50+50*Math.tanh(momentum/15),
-    0,
-    100
-  );
+  const momentum=(latest.close/before24[before24.length-1].close-1)*100;
+  const momentumScore=clamp(50+50*Math.tanh(momentum/15),0,100);
 
   const currentVol=returnsVolatility(last24);
   const historicalVol=[];
 
   for(let t=start30;t<start24;t+=day) {
-    const sample=candles.filter(
-      c=>c.time>=t && c.time<t+day
-    );
-
-    if(sample.length>=2) {
-      historicalVol.push(returnsVolatility(sample));
-    }
+    const sample=candles.filter(c=>c.time>=t && c.time<t+day);
+    if(sample.length>=2) historicalVol.push(returnsVolatility(sample));
   }
 
-  const volatilityScore=
-    100*(1-percentileRank(currentVol,historicalVol));
+  const volatilityScore=100*(1-percentileRank(currentVol,historicalVol));
 
-  const currentVolume=last24.reduce(
-    (sum,c)=>sum+c.volume,0
-  );
-
+  const currentVolume=last24.reduce((sum,c)=>sum+c.volume,0);
   const historicalVolumes=[];
 
   for(let t=start30;t<start24;t+=day) {
-    const sample=candles.filter(
-      c=>c.time>=t && c.time<t+day
-    );
-
+    const sample=candles.filter(c=>c.time>=t && c.time<t+day);
     if(sample.length) {
-      historicalVolumes.push(
-        sample.reduce((sum,c)=>sum+c.volume,0)
-      );
+      historicalVolumes.push(sample.reduce((sum,c)=>sum+c.volume,0));
     }
   }
 
   const typicalVolume=mean(historicalVolumes);
-
-  const volumeRatio=
-    typicalVolume>0 ? currentVolume/typicalVolume : 1;
+  const volumeRatio=typicalVolume>0?currentVolume/typicalVolume:1;
 
   const volumeScore=clamp(
     50+50*Math.tanh(
-      Math.log(Math.max(volumeRatio,0.01))*
-      Math.sign(momentum || 0)*0.6
+      Math.log(Math.max(volumeRatio,0.01))*Math.sign(momentum || 0)*0.6
     ),
-    0,
-    100
+    0,100
   );
 
   const ma7=mean(last7.map(c=>c.close));
   const ma30=mean(last30.map(c=>c.close));
-
   const ma7Diff=(latest.close/ma7-1)*100;
   const ma30Diff=(latest.close/ma30-1)*100;
 
   const averagesScore=clamp(
-    50+
-    25*Math.tanh(ma7Diff/8)+
-    25*Math.tanh(ma30Diff/12),
-    0,
-    100
+    50+25*Math.tanh(ma7Diff/8)+25*Math.tanh(ma30Diff/12),
+    0,100
   );
 
   const peak=Math.max(...last30.map(c=>c.high));
   const drawdown=(latest.close/peak-1)*100;
-
-  const drawdownScore=clamp(
-    100*(1+drawdown/50),
-    0,
-    100
-  );
+  const drawdownScore=clamp(100*(1+drawdown/50),0,100);
 
   const w=CONFIG.weights;
 
@@ -591,6 +520,7 @@ function calculateSentiment(candles) {
 
   return {
     score,
+    currentVolume,
     timestamp:now,
     price:latest.close
   };
@@ -607,9 +537,7 @@ function updateMeter(score) {
   $("score").textContent=score;
 
   const category=classify(score);
-
   $("classification").textContent=category;
-  $("classificationDisplay").textContent=category;
 
   const colors={
     "EXTREME FEAR":"#b94d42",
@@ -626,32 +554,23 @@ function updateDirection(score,timestamp) {
   let history=[];
 
   try {
-    history=JSON.parse(
-      localStorage.getItem(CONFIG.storageKey)||"[]"
-    );
+    history=JSON.parse(localStorage.getItem(CONFIG.storageKey)||"[]");
   } catch(_) {}
 
   const hour=Math.floor(timestamp/3600000);
   const icon=$("directionIcon");
 
-  let previous=history.length
-    ? history[history.length-1]
-    : null;
+  let previous=history.length?history[history.length-1]:null;
 
   if(!previous || previous.hour!==hour) {
     history.push({hour,score});
     history=history.slice(-48);
 
     try {
-      localStorage.setItem(
-        CONFIG.storageKey,
-        JSON.stringify(history)
-      );
+      localStorage.setItem(CONFIG.storageKey,JSON.stringify(history));
     } catch(_) {}
 
-    previous=history.length>1
-      ? history[history.length-2]
-      : null;
+    previous=history.length>1?history[history.length-2]:null;
   }
 
   if(!previous) {
@@ -682,17 +601,17 @@ function render(result) {
   updateMeter(result.score);
   updateDirection(result.score,result.timestamp);
 
-  $("price").textContent=result.price.toLocaleString(
-    "en-US",
-    {
-      minimumFractionDigits:2,
-      maximumFractionDigits:8
-    }
-  )+" USDC";
+  $("price").textContent=result.price.toLocaleString("en-US",{
+    minimumFractionDigits:2,
+    maximumFractionDigits:8
+  })+" USDC";
+
+  $("volume").textContent=result.currentVolume.toLocaleString("en-US",{
+    maximumFractionDigits:2
+  })+" BTCB2";
 
   $("updated").textContent=
-    "Last updated: "+
-    new Date(result.timestamp).toLocaleString();
+    "Last updated: "+new Date(result.timestamp).toLocaleString();
 
   $("status").textContent="Market data connected";
 }
@@ -701,22 +620,15 @@ async function loadMarket() {
   $("status").textContent="Updating market data...";
 
   try {
-    const response=await fetch(
-      CONFIG.api,
-      {cache:"no-store"}
-    );
+    const response=await fetch(CONFIG.api,{cache:"no-store"});
 
     if(!response.ok) {
       let message="Market API returned HTTP "+response.status;
 
       try {
         const errorData=await response.json();
-
-        if(errorData.details) {
-          message+=": "+errorData.details;
-        } else if(errorData.error) {
-          message+=": "+errorData.error;
-        }
+        if(errorData.details) message+=": "+errorData.details;
+        else if(errorData.error) message+=": "+errorData.error;
       } catch(_) {}
 
       throw new Error(message);
@@ -732,13 +644,8 @@ async function loadMarket() {
     render(calculateSentiment(candles));
 
   } catch(error) {
-    console.error(
-      "BLAKE SENTIMENT market data error:",
-      error
-    );
-
-    $("status").textContent=
-      "Market data unavailable: "+error.message;
+    console.error("BLAKE SENTIMENT market data error:",error);
+    $("status").textContent="Market data unavailable: "+error.message;
   }
 }
 
@@ -755,7 +662,6 @@ $("copyDonation").addEventListener("click",async()=>{
 });
 
 let deferredPrompt=null;
-
 const installButton=$("installButton");
 
 window.addEventListener("beforeinstallprompt",event=>{
@@ -769,7 +675,6 @@ installButton.addEventListener("click",async()=>{
 
   deferredPrompt.prompt();
   await deferredPrompt.userChoice;
-
   deferredPrompt=null;
   installButton.style.display="none";
 });
@@ -781,21 +686,13 @@ window.addEventListener("appinstalled",()=>{
 if("serviceWorker" in navigator) {
   window.addEventListener("load",()=>{
     navigator.serviceWorker.register("./sw.js")
-      .then(()=>{
-        console.log("BLAKE SENTIMENT service worker registered");
-      })
-      .catch(error=>{
-        console.error(
-          "Service worker registration failed:",
-          error
-        );
-      });
+      .then(()=>console.log("BLAKE SENTIMENT service worker registered"))
+      .catch(error=>console.error("Service worker registration failed:",error));
   });
 }
 
 loadMarket();
 setInterval(loadMarket,CONFIG.refreshMs);
-
 </script>
 </body>
 </html>
