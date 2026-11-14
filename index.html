@@ -1,0 +1,43 @@
+("var(--muted)";$("directionText").textContent="Stable sentiment"}
+}
+function render(result,price){
+ updateMeter(result.score);updateDirection(result.score,result.timestamp);
+ $("price").textContent=price.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:8})+" USDC";
+ $("momentum").textContent=(result.momentum>=0?"+":"")+result.momentum.toFixed(2)+"%";
+ $("volume").textContent=result.currentVolume.toLocaleString("en-US",{maximumFractionDigits:2})+" BTCB2";
+ $("volatility").textContent=(result.currentVol*100).toFixed(3)+"%";
+ $("averages").textContent=result.averagesScore.toFixed(0)+" / 100";
+ $("drawdown").textContent=result.drawdown.toFixed(2)+"%";
+ $("updated").textContent="Last updated: "+new Date(result.timestamp).toLocaleString();
+ $("status").textContent="Market data connected";
+}
+async function loadMarket(){
+ $("status").textContent="Updating market data...";
+ try{
+  const response=await fetch(CONFIG.api,{cache:"no-store"});
+  if(!response.ok)throw Error("Market API: "+response.status);
+  const candles=normalizeCandles(await response.json());
+  if(candles.length<100)throw Error("Insufficient historical candles");
+  const result=calculate(candles);
+  render(result,candles.at(-1).close);
+ }catch(error){console.error(error);$("status").textContent="Market data unavailable: "+error.message}
+}
+$("copyDonation").addEventListener("click",async()=>{
+ try{await navigator.clipboard.writeText($("donationAddress").textContent.trim());$("copyStatus").textContent="Address copied"}
+ catch{$("copyStatus").textContent="Copy unavailable. Select the address manually."}
+});
+let deferredPrompt=null;
+const installButton=$("installButton");
+window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();deferredPrompt=event;installButton.style.display="block"});
+installButton.addEventListener("click",async()=>{
+ if(!deferredPrompt)return;
+ deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;installButton.style.display="none";
+});
+window.addEventListener("appinstalled",()=>installButton.style.display="none");
+if("serviceWorker" in navigator)window.addEventListener("load",()=>{
+ navigator.serviceWorker.register("./sw.js").then(()=>console.log("PWA service worker registered")).catch(console.error);
+});
+loadMarket();setInterval(loadMarket,CONFIG.refresh);
+</script>
+</body>
+</html>
