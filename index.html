@@ -1,10 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#171714">
-<meta name="description" content="Bitcoin Blake Fear and Greed Index">
+<meta name="description" content="Bitcoin Blake market sentiment index">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <title>BLAKE SENTIMENT</title>
@@ -243,7 +244,7 @@ footer {
 
 <header>
   <div class="logo">BLAKE SENTIMENT</div>
-  <div class="network">BITCOIN BLAKE NETWORK</div>
+  <div class="network">BTCB2 NETWORK</div>
 </header>
 
 <div class="market">BTCB2 / USDC MARKET SENTIMENT</div>
@@ -442,7 +443,7 @@ function returnsVolatility(candles) {
   return stdDev(returns);
 }
 
-function calculateSentiment(candles,quoteVolume24h) {
+function calculateSentiment(candles,ticker) {
   const latest=candles[candles.length-1];
   const now=latest.time;
   const day=86400000;
@@ -473,26 +474,38 @@ function calculateSentiment(candles,quoteVolume24h) {
 
   const volatilityScore=100*(1-percentileRank(currentVol,historicalVol));
 
-  // Current 24H volume is NeoxEX quote volume, denominated in USDC.
-  const currentVolume=quoteVolume24h;
+  const currentVolume=Number(ticker.quoteVolume24h);
+
+  if(!Number.isFinite(currentVolume) || currentVolume<0) {
+    throw new Error("Invalid USDC volume received from market API");
+  }
+
   const historicalVolumes=[];
 
   for(let t=start30;t<start24;t+=day) {
     const sample=candles.filter(c=>c.time>=t && c.time<t+day);
+
     if(sample.length) {
-      // Convert historical BTCB2 base volume into USDC using each candle close.
-      historicalVolumes.push(sample.reduce((sum,c)=>sum+(c.volume*c.close),0));
+      const dailyUSDCVolume=sample.reduce(
+        (sum,c)=>sum+(c.volume*c.close),
+        0
+      );
+
+      historicalVolumes.push(dailyUSDCVolume);
     }
   }
 
   const typicalVolume=mean(historicalVolumes);
-  const volumeRatio=typicalVolume>0?currentVolume/typicalVolume:1;
+  const volumeRatio=typicalVolume>0
+    ? currentVolume/typicalVolume
+    : 1;
 
   const volumeScore=clamp(
     50+50*Math.tanh(
-      Math.log(Math.max(volumeRatio,0.01))*Math.sign(momentum || 0)*0.6
+      Math.log(Math.max(volumeRatio,0.01))*0.6
     ),
-    0,100
+    0,
+    100
   );
 
   const ma7=mean(last7.map(c=>c.close));
@@ -502,7 +515,8 @@ function calculateSentiment(candles,quoteVolume24h) {
 
   const averagesScore=clamp(
     50+25*Math.tanh(ma7Diff/8)+25*Math.tanh(ma30Diff/12),
-    0,100
+    0,
+    100
   );
 
   const peak=Math.max(...last30.map(c=>c.high));
@@ -522,8 +536,8 @@ function calculateSentiment(candles,quoteVolume24h) {
   return {
     score,
     currentVolume,
-    timestamp:now,
-    price:latest.close
+    timestamp:Number(ticker.computedAt) || Date.now(),
+    price:Number(ticker.lastPrice) || latest.close
   };
 }
 
@@ -608,7 +622,6 @@ function render(result) {
   })+" USDC";
 
   $("volume").textContent=result.currentVolume.toLocaleString("en-US",{
-    minimumFractionDigits:2,
     maximumFractionDigits:2
   })+" USDC";
 
@@ -638,13 +651,8 @@ async function loadMarket() {
 
     const payload=await response.json();
 
-    if(!payload.success || !payload.ticker || !payload.candles) {
-      throw new Error("Incomplete candles or ticker data from market API");
-    }
-
-    const quoteVolume24h=Number(payload.ticker.quoteVolume24h);
-    if(!Number.isFinite(quoteVolume24h) || quoteVolume24h<0) {
-      throw new Error("Invalid 24H USDC quote volume");
+    if(payload?.success!==true || !payload?.ticker || !payload?.candles) {
+      throw new Error("Unexpected market API response");
     }
 
     const candles=normalizeCandles(payload.candles);
@@ -653,7 +661,7 @@ async function loadMarket() {
       throw new Error("API returned fewer than 100 usable candles");
     }
 
-    render(calculateSentiment(candles,quoteVolume24h));
+    render(calculateSentiment(candles,payload.ticker));
 
   } catch(error) {
     console.error("BLAKE SENTIMENT market data error:",error);
