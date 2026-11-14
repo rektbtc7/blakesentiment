@@ -1,43 +1,444 @@
-("var(--muted)";$("directionText").textContent="Stable sentiment"}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#171714">
+<meta name="description" content="Bitcoin Blake market sentiment index">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<title>BLAKE SENTIMENT</title>
+<style>
+:root{--bg:#171714;--panel:#20201c;--text:#f0eee5;--muted:#929187;--brown:#a87845;--border:#34342e;--green:#70ad78;--red:#d56b59}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;display:flex;justify-content:center}
+main{width:100%;max-width:620px;padding:34px 22px}
+header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:20px}
+.logo{font-size:17px;font-weight:800;letter-spacing:2px}
+.network{font-size:10px;letter-spacing:1px;color:var(--muted)}
+.market{margin-top:27px;color:var(--muted);font-size:11px;letter-spacing:1.5px;text-align:center}
+.meter{width:100%;max-width:440px;margin:25px auto 0}
+.meter svg{width:100%;display:block;overflow:visible}
+.score{font-size:62px;font-weight:800;fill:var(--text)}
+.classification{font-size:15px;font-weight:800;letter-spacing:2px;fill:var(--brown)}
+.scale{fill:var(--muted);font-size:10px}
+.direction{display:flex;justify-content:center;align-items:center;gap:9px;margin-top:-5px;font-size:13px;color:var(--muted)}
+.direction-icon{font-size:23px;font-weight:bold}
+.details,.section{margin-top:30px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px}
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);font-size:13px}
+.detail-row:last-child{border-bottom:none}
+.detail-row span:first-child{color:var(--muted)}
+.timestamp,.status{margin-top:20px;text-align:center;color:var(--muted);font-size:11px}
+.status{margin-top:12px}
+.section-title{font-size:12px;font-weight:bold;letter-spacing:1.5px;margin-bottom:17px}
+.donation-address{overflow-wrap:anywhere;color:var(--muted);font-family:monospace;font-size:12px;line-height:1.7;padding:12px;background:var(--bg);border-radius:6px}
+button{border:1px solid var(--border);background:#302e27;color:var(--text);padding:11px 16px;border-radius:6px;font-size:12px;font-weight:bold;cursor:pointer}
+button:hover{border-color:var(--brown)}
+.action-button{width:100%;margin-top:12px}
+.install-button{display:none;background:var(--brown);color:white;border-color:var(--brown)}
+.instructions{color:var(--muted);font-size:12px;line-height:1.8}
+.instructions strong{color:var(--text)}
+footer{margin-top:35px;padding-top:18px;border-top:1px solid var(--border);text-align:center;color:var(--muted);font-size:10px;letter-spacing:1px}
+@media(max-width:400px){main{padding:25px 15px}.score{font-size:55px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div class="logo">BLAKE SENTIMENT</div>
+<div class="network">BTCB2 NETWORK</div>
+</header>
+
+<div class="market">BTCB2 / USDC MARKET SENTIMENT</div>
+
+<div class="meter">
+<svg viewBox="0 0 360 230" role="img" aria-label="Bitcoin Blake market sentiment meter">
+<defs>
+<linearGradient id="gauge" x1="0" x2="1">
+<stop offset="0%" stop-color="#b94d42"/>
+<stop offset="25%" stop-color="#d18b4c"/>
+<stop offset="50%" stop-color="#d6c45d"/>
+<stop offset="75%" stop-color="#9eae60"/>
+<stop offset="100%" stop-color="#479b70"/>
+</linearGradient>
+</defs>
+<path d="M35 185 A145 145 0 0 1 325 185" fill="none" stroke="#34342e" stroke-width="19" stroke-linecap="round"/>
+<path d="M35 185 A145 145 0 0 1 325 185" fill="none" stroke="url(#gauge)" stroke-width="19" stroke-linecap="round"/>
+<g id="needle">
+<line x1="180" y1="185" x2="180" y2="55" stroke="#f0eee5" stroke-width="3" stroke-linecap="round"/>
+<circle cx="180" cy="185" r="8" fill="#f0eee5"/>
+</g>
+<text x="180" y="139" text-anchor="middle" class="score" id="score">--</text>
+<text x="180" y="163" text-anchor="middle" class="classification" id="classification">LOADING</text>
+<text x="27" y="211" class="scale">0</text>
+<text x="333" y="211" text-anchor="end" class="scale">100</text>
+</svg>
+</div>
+
+<div class="direction">
+<span class="direction-icon" id="directionIcon">→</span>
+<span id="directionText">Waiting for market data</span>
+</div>
+
+<div class="details">
+<div class="detail-row"><span>BTCB2 Price</span><strong id="price">--</strong></div>
+<div class="detail-row"><span>24H Momentum</span><strong id="momentum">--</strong></div>
+<div class="detail-row"><span>24H Volume</span><strong id="volume">--</strong></div>
+<div class="detail-row"><span>Volatility</span><strong id="volatility">--</strong></div>
+<div class="detail-row"><span>Moving Averages</span><strong id="averages">--</strong></div>
+<div class="detail-row"><span>30D Drawdown</span><strong id="drawdown">--</strong></div>
+</div>
+
+<div class="timestamp" id="updated">Waiting for market data</div>
+<div class="status" id="status">Connecting to market data</div>
+
+<div class="section">
+<div class="section-title">SUPPORT BLAKE SENTIMENT</div>
+<div class="donation-address" id="donationAddress">bc1qt59feseuqngdcx35pypsyt435a7m5r8cf49s73</div>
+<button class="action-button" id="copyDonation">COPY BTCB2 DONATION ADDRESS</button>
+<div class="status" id="copyStatus"></div>
+</div>
+
+<div class="section">
+<div class="section-title">INSTALL BLAKE SENTIMENT</div>
+<button class="action-button install-button" id="installButton">INSTALL APPLICATION</button>
+<div class="instructions" style="margin-top:14px">
+<strong>Android / Chrome</strong><br>
+Open the browser menu and select Install app or Add to Home Screen.
+<br><br>
+<strong>iPhone / Safari</strong><br>
+Tap Share, select Add to Home Screen, then tap Add.
+<br><br>
+<strong>Desktop / Chrome or Edge</strong><br>
+Use the installation icon in the browser address bar, if available.
+</div>
+</div>
+
+<footer>BLAKE SENTIMENT · BITCOIN BLAKE · BTCB2</footer>
+</main>
+
+<script>
+"use strict";
+
+const CONFIG = {
+api: "https://neoxa.exchange/api/exchange/candles/BTCB2_USDC",
+refreshMs: 60 * 60 * 1000,
+weights: {
+momentum: 0.15,
+volatility: 0.20,
+volume: 0.15,
+averages: 0.25,
+drawdown: 0.25
+},
+storageKey: "blake_sentiment_v1"
+};
+
+const $ = id => document.getElementById(id);
+const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
+const mean = values => values.length ? values.reduce((a,b)=>a+b,0)/values.length : 0;
+
+function stdDev(values) {
+if(values.length<2)return 0;
+const avg=mean(values);
+return Math.sqrt(mean(values.map(v=>(v-avg)**2)));
 }
-function render(result,price){
- updateMeter(result.score);updateDirection(result.score,result.timestamp);
- $("price").textContent=price.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:8})+" USDC";
- $("momentum").textContent=(result.momentum>=0?"+":"")+result.momentum.toFixed(2)+"%";
- $("volume").textContent=result.currentVolume.toLocaleString("en-US",{maximumFractionDigits:2})+" BTCB2";
- $("volatility").textContent=(result.currentVol*100).toFixed(3)+"%";
- $("averages").textContent=result.averagesScore.toFixed(0)+" / 100";
- $("drawdown").textContent=result.drawdown.toFixed(2)+"%";
- $("updated").textContent="Last updated: "+new Date(result.timestamp).toLocaleString();
- $("status").textContent="Market data connected";
+
+function classify(score) {
+if(score<=20)return "EXTREME FEAR";
+if(score<=40)return "FEAR";
+if(score<=60)return "NEUTRAL";
+if(score<=80)return "GREED";
+return "EXTREME GREED";
 }
-async function loadMarket(){
- $("status").textContent="Updating market data...";
- try{
-  const response=await fetch(CONFIG.api,{cache:"no-store"});
-  if(!response.ok)throw Error("Market API: "+response.status);
-  const candles=normalizeCandles(await response.json());
-  if(candles.length<100)throw Error("Insufficient historical candles");
-  const result=calculate(candles);
-  render(result,candles.at(-1).close);
- }catch(error){console.error(error);$("status").textContent="Market data unavailable: "+error.message}
+
+function normalizeCandles(payload) {
+let rows=payload;
+if(!Array.isArray(rows)) {
+rows=payload?.data?.candles ?? payload?.data ?? payload?.candles ?? payload?.result ?? payload?.results;
 }
+if(!Array.isArray(rows))throw new Error("API response is not a candle array");
+
+const parsed=rows.map(row=>{
+const c=Array.isArray(row)
+?{time:row[0],open:row[1],high:row[2],low:row[3],close:row[4],volume:row[5]}
+:{
+time:row.time??row.timestamp??row.openTime??row.t,
+open:row.open??row.o,
+high:row.high??row.h,
+low:row.low??row.l,
+close:row.close??row.c,
+volume:row.volume??row.vol??row.v
+};
+
+let time=Number(c.time);
+if(time>0&&time<100000000000)time*=1000;
+
+return {
+time,
+open:Number(c.open),
+high:Number(c.high),
+low:Number(c.low),
+close:Number(c.close),
+volume:Number(c.volume)
+};
+}).filter(c=>
+Number.isFinite(c.time)&&c.time>0&&
+Number.isFinite(c.close)&&c.close>0&&
+Number.isFinite(c.high)&&Number.isFinite(c.low)&&
+Number.isFinite(c.volume)
+);
+
+parsed.sort((a,b)=>a.time-b.time);
+const unique=new Map();
+parsed.forEach(c=>unique.set(c.time,c));
+return [...unique.values()];
+}
+
+function percentileRank(value,samples) {
+if(!samples.length)return 0.5;
+return samples.filter(v=>v<=value).length/samples.length;
+}
+
+function returnsVolatility(candles) {
+const returns=[];
+for(let i=1;i<candles.length;i++) {
+returns.push(Math.log(candles[i].close/candles[i-1].close));
+}
+return stdDev(returns);
+}
+
+function calculateSentiment(candles) {
+const latest=candles[candles.length-1];
+const now=latest.time;
+const day=86400000;
+const start24=now-day;
+const start7=now-7*day;
+const start30=now-30*day;
+
+const last24=candles.filter(c=>c.time>=start24);
+const last7=candles.filter(c=>c.time>=start7);
+const last30=candles.filter(c=>c.time>=start30);
+const before24=candles.filter(c=>c.time<=start24);
+
+if(last24.length<2||last7.length<2||last30.length<2||!before24.length) {
+throw new Error("Not enough historical candles. At least 30 days of data are needed.");
+}
+
+const momentum=(latest.close/before24[before24.length-1].close-1)*100;
+const momentumScore=clamp(50+50*Math.tanh(momentum/15),0,100);
+
+const currentVol=returnsVolatility(last24);
+const historicalVol=[];
+
+for(let t=start30;t<start24;t+=day) {
+const sample=candles.filter(c=>c.time>=t&&c.time<t+day);
+if(sample.length>=2)historicalVol.push(returnsVolatility(sample));
+}
+
+const volatilityScore=100*(1-percentileRank(currentVol,historicalVol));
+
+const currentVolume=last24.reduce((sum,c)=>sum+c.volume,0);
+const historicalVolumes=[];
+
+for(let t=start30;t<start24;t+=day) {
+const sample=candles.filter(c=>c.time>=t&&c.time<t+day);
+if(sample.length)historicalVolumes.push(sample.reduce((sum,c)=>sum+c.volume,0));
+}
+
+const typicalVolume=mean(historicalVolumes);
+const volumeRatio=typicalVolume>0?currentVolume/typicalVolume:1;
+
+const volumeScore=clamp(
+50+50*Math.tanh(
+Math.log(Math.max(volumeRatio,0.01))*Math.sign(momentum||0)*0.6
+),0,100
+);
+
+const ma7=mean(last7.map(c=>c.close));
+const ma30=mean(last30.map(c=>c.close));
+const ma7Diff=(latest.close/ma7-1)*100;
+const ma30Diff=(latest.close/ma30-1)*100;
+
+const averagesScore=clamp(
+50+25*Math.tanh(ma7Diff/8)+25*Math.tanh(ma30Diff/12),0,100
+);
+
+const peak=Math.max(...last30.map(c=>c.high));
+const drawdown=(latest.close/peak-1)*100;
+const drawdownScore=clamp(100*(1+drawdown/50),0,100);
+
+const w=CONFIG.weights;
+const score=Math.round(
+momentumScore*w.momentum+
+volatilityScore*w.volatility+
+volumeScore*w.volume+
+averagesScore*w.averages+
+drawdownScore*w.drawdown
+);
+
+return {
+score,momentum,currentVolume,currentVol,
+averagesScore,drawdown,timestamp:now,price:latest.close
+};
+}
+
+function updateMeter(score) {
+const angle=-90+(score/100)*180;
+$("needle").setAttribute("transform",`rotate(${angle} 180 185)`);
+$("score").textContent=score;
+
+const category=classify(score);
+$("classification").textContent=category;
+
+const colors={
+"EXTREME FEAR":"#b94d42",
+"FEAR":"#d18b4c",
+"NEUTRAL":"#d6c45d",
+"GREED":"#9eae60",
+"EXTREME GREED":"#479b70"
+};
+$("classification").style.fill=colors[category];
+}
+
+function updateDirection(score,timestamp) {
+let history=[];
+try {
+history=JSON.parse(localStorage.getItem(CONFIG.storageKey)||"[]");
+} catch(_) {}
+
+const hour=Math.floor(timestamp/3600000);
+let previous=history.length?history[history.length-1]:null;
+
+if(!previous||previous.hour!==hour) {
+history.push({hour,score});
+history=history.slice(-48);
+try {
+localStorage.setItem(CONFIG.storageKey,JSON.stringify(history));
+} catch(_) {}
+previous=history.length>1?history[history.length-2]:null;
+}
+
+const icon=$("directionIcon");
+
+if(!previous) {
+icon.textContent="→";
+$("directionText").textContent="Building direction baseline";
+return;
+}
+
+const change=score-previous.score;
+
+if(change>2) {
+icon.textContent="↑";
+icon.style.color="var(--green)";
+$("directionText").textContent="Increasing sentiment";
+} else if(change< -2) {
+icon.textContent="↓";
+icon.style.color="var(--red)";
+$("directionText").textContent="Decreasing sentiment";
+} else {
+icon.textContent="→";
+icon.style.color="var(--muted)";
+$("directionText").textContent="Stable sentiment";
+}
+}
+
+function render(result) {
+updateMeter(result.score);
+updateDirection(result.score,result.timestamp);
+
+$("price").textContent=result.price.toLocaleString("en-US",{
+minimumFractionDigits:2,maximumFractionDigits:8
+})+" USDC";
+
+$("momentum").textContent=
+(result.momentum>=0?"+":"")+result.momentum.toFixed(2)+"%";
+
+$("volume").textContent=result.currentVolume.toLocaleString("en-US",{
+maximumFractionDigits:2
+})+" BTCB2";
+
+$("volatility").textContent=(result.currentVol*100).toFixed(3)+"%";
+$("averages").textContent=result.averagesScore.toFixed(0)+" / 100";
+$("drawdown").textContent=result.drawdown.toFixed(2)+"%";
+
+$("updated").textContent="Last updated: "+
+new Date(result.timestamp).toLocaleString();
+
+$("status").textContent="Market data connected";
+}
+
+async function loadMarket() {
+$("status").textContent="Updating market data...";
+
+try {
+const response=await fetch(CONFIG.api,{cache:"no-store"});
+if(!response.ok)throw new Error("Market API returned HTTP "+response.status);
+
+const payload=await response.json();
+const candles=normalizeCandles(payload);
+
+if(candles.length<100) {
+throw new Error("API returned fewer than 100 usable candles");
+}
+
+render(calculateSentiment(candles));
+
+} catch(error) {
+console.error(error);
+$("status").textContent="Market data unavailable: "+error.message;
+}
+}
+
+/* DONATION */
+
 $("copyDonation").addEventListener("click",async()=>{
- try{await navigator.clipboard.writeText($("donationAddress").textContent.trim());$("copyStatus").textContent="Address copied"}
- catch{$("copyStatus").textContent="Copy unavailable. Select the address manually."}
+const address=$("donationAddress").textContent.trim();
+
+try {
+await navigator.clipboard.writeText(address);
+$("copyStatus").textContent="Address copied";
+} catch(_) {
+$("copyStatus").textContent="Clipboard unavailable. Select and copy the address manually.";
+}
 });
+
+/* PWA INSTALLATION */
+
 let deferredPrompt=null;
 const installButton=$("installButton");
-window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();deferredPrompt=event;installButton.style.display="block"});
+
+window.addEventListener("beforeinstallprompt",event=>{
+event.preventDefault();
+deferredPrompt=event;
+installButton.style.display="block";
+});
+
 installButton.addEventListener("click",async()=>{
- if(!deferredPrompt)return;
- deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;installButton.style.display="none";
+if(!deferredPrompt)return;
+deferredPrompt.prompt();
+await deferredPrompt.userChoice;
+deferredPrompt=null;
+installButton.style.display="none";
 });
-window.addEventListener("appinstalled",()=>installButton.style.display="none");
-if("serviceWorker" in navigator)window.addEventListener("load",()=>{
- navigator.serviceWorker.register("./sw.js").then(()=>console.log("PWA service worker registered")).catch(console.error);
+
+window.addEventListener("appinstalled",()=>{
+installButton.style.display="none";
 });
-loadMarket();setInterval(loadMarket,CONFIG.refresh);
+
+/* SERVICE WORKER */
+
+if("serviceWorker" in navigator) {
+window.addEventListener("load",()=>{
+navigator.serviceWorker.register("./sw.js")
+.then(()=>console.log("BLAKE SENTIMENT service worker registered"))
+.catch(error=>console.error("Service worker registration failed:",error));
+});
+}
+
+loadMarket();
+setInterval(loadMarket,CONFIG.refreshMs);
 </script>
 </body>
 </html>
