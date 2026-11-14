@@ -1,19 +1,20 @@
+
 {
   "name": "BLAKE SENTIMENT",
-  "short_name": "BLAKE",
-  "description": "Bitcoin Blake market sentiment index",
-  "start_url": "./",
-  "scope": "./",
+  "short_name": "BLAKE SENTIMENT",
+  "description": "Technical market sentiment index for BTCB2/USDC.",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#171714",
-  "theme_color": "#171714",
+  "background_color": "#111111",
+  "theme_color": "#111111",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "./icon.svg",
+      "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }
