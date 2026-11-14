@@ -1,0 +1,23 @@
+{
+  "name": "blakesentiment",
+  "version": "1.0.0",
+  "description": "Bitcoin Blake market sentiment index",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rektbtc7/blakesentiment.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rektbtc7/blakesentiment/issues"
+  },
+  "homepage": "https://github.com/rektbtc7/blakesentiment#readme",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
+}
